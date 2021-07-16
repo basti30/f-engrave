@@ -202,17 +202,17 @@ class VCarveSettings(object):
         self.Label_cutter_type.pack(side=LEFT, anchor=N)
 
         self.Radio_Type_VBIT = Radiobutton(self.cutter_type_frame, text="V-Bit", value="VBIT", width=w_radio, anchor=W)
-        self.Radio_Type_VBIT.pack(side=TOP, anchor=E)
+        self.Radio_Type_VBIT.pack(side=LEFT, anchor=E)
         self.Radio_Type_VBIT.configure(variable=self.bit_shape)
 
         self.Radio_Type_BALL = Radiobutton(self.cutter_type_frame, text="Ball Nose", value="BALL", width=w_radio,
                                            anchor=W)
-        self.Radio_Type_BALL.pack(side=TOP, anchor=E)
+        self.Radio_Type_BALL.pack(side=LEFT, anchor=E)
         self.Radio_Type_BALL.configure(variable=self.bit_shape)
 
         self.Radio_Type_STRAIGHT = Radiobutton(self.cutter_type_frame, text="Straight", value="FLAT", width=w_radio,
                                                anchor=W)
-        self.Radio_Type_STRAIGHT.pack(side=TOP, anchor=E)
+        self.Radio_Type_STRAIGHT.pack(side=LEFT, anchor=E)
         self.Radio_Type_STRAIGHT.configure(variable=self.bit_shape)
 
         self.bit_shape.trace_variable("w", self.Entry_Bit_Shape_var_Callback)
@@ -354,7 +354,7 @@ class VCarveSettings(object):
         self.Label_clean = Label(vcarve_settings_lower, text="Cleanup Operations", width=w_label)
 
         self.clean_dia_frame = Frame(vcarve_settings_lower)
-        self.CLEAN_Recalculate = Button(self.clean_dia_frame, text="Calculate\nCleanup",
+        self.CLEAN_Recalculate = Button(self.clean_dia_frame, text="Calculate Cleanup",
                                         command=self.Ctrl_calculate_cleanup)
         self.CLEAN_Recalculate.pack(side=RIGHT, padx=10, anchor=E)
 
@@ -382,7 +382,7 @@ class VCarveSettings(object):
 
         self.Label_clean_P = Label(self.clean_directions_frame, text="Cleanup Cut Directions", width=w_label)
         self.Label_clean_P.pack(side=LEFT, anchor=W)
-        self.Write_Clean = Button(self.clean_directions_frame, text="Save Cleanup\nG-Code",
+        self.Write_Clean = Button(self.clean_directions_frame, text="Save Cleanup G-Code",
                                   command=self.Ctrl_write_clean_file)
         self.Write_Clean.pack(side=RIGHT, padx=10, anchor=E)
 
@@ -419,7 +419,7 @@ class VCarveSettings(object):
         self.Label_v_clean_P = Label(self.v_clean_directions_frame, text="V-Bit Cut Directions", width=w_label)
         self.Label_v_clean_P.pack(side=LEFT, anchor=W)
 
-        self.Write_V_Clean = Button(self.v_clean_directions_frame, text="Save V Cleanup\nG-Code",
+        self.Write_V_Clean = Button(self.v_clean_directions_frame, text="Save V Cleanup G-Code",
                                     command=self.Ctrl_write_v_clean_file)
         self.Write_V_Clean.pack(side=RIGHT, padx=10, anchor=E)
 
@@ -507,7 +507,7 @@ class VCarveSettings(object):
         self.configure_cut_type()
 
         vcarve_settings_upper.grid(row=0, column=0)
-        self.Label_photo.grid(row=0, column=1)
+        self.Label_photo.place(x=390, y=70)
         vcarve_settings_lower.grid(row=1, column=0, columnspan=2)
 
     def configure_cut_type(self):
