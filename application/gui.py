@@ -703,7 +703,7 @@ class Gui(Frame):
         init_dir = os.path.dirname(self.NGC_FILE)
         if not os.path.isdir(init_dir):
             init_dir = self.HOME_DIR
-        fileselect = askopenfilename(filetypes=[("F-Engrave G-code Files", "*.ngc"),
+        fileselect = askopenfilename(filetypes=[("F-Engrave G-code Files", "*.nc"),
                                                 ("All Files", "*")],
                                      initialdir=init_dir)
 
@@ -720,7 +720,8 @@ class Gui(Frame):
         if POTRACE_AVAILABLE:
             if PIL:
                 fileselect = askopenfilename(
-                    filetypes=[("DXF/Bitmap Files", ("*.dxf", "*.bmp", "*.pbm", "*.ppm", "*.pgm", "*.pnm")),
+                    filetypes=[("Supported", ("*.dxf", "*.bmp", "*.pbm", "*.ppm", "*.pgm", "*.pnm", "*.jpg", "*.png", "*.gif", "*.tif")),
+                               ("DXF/Bitmap Files", ("*.dxf", "*.bmp", "*.pbm", "*.ppm", "*.pgm", "*.pnm", )),
                                ("DXF Files", "*.dxf"),
                                ("Bitmap Files", ("*.bmp", "*.pbm", "*.ppm", "*.pgm", "*.pnm")),
                                ("Slower Image Files", ("*.jpg", "*.png", "*.gif", "*.tif")),

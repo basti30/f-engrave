@@ -56,10 +56,22 @@ POTRACE_AVAILABLE = False
 
 try:
     PIL = externals.check_pil()
+except Exception as e:
+    fmessage(str(e))
+try:
     PUBSUB = externals.check_pubsub()
+except Exception as e:
+    fmessage(str(e))
+try:
     OVD_AVAILABLE = externals.check_ovd()
-    TTF_AVAILABLE = externals.check_ttf()
+except Exception as e:
+    fmessage(str(e))
+try:
     POTRACE_AVAILABLE = externals.check_potrace()
+except Exception as e:
+    fmessage(str(e))
+try:
+    TTF_AVAILABLE = externals.check_ttf()
 except Exception as e:
     fmessage(str(e))
 
