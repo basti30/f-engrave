@@ -1,6 +1,16 @@
 # OOF-Engrave
-This is a fork of [jieter/f-engrave](https://github.com/jieter/f-engrave)
+This is a fork of [Blokkendoos/OOF-engrave](https://github.com/Blokkendoos/OOF-Engrave)
+which was a fork of [jieter/f-engrave](https://github.com/jieter/f-engrave)
 which in turn was a fork of [Scorchworks F-Engrave](http://www.scorchworks.com/Fengrave/fengrave.html).
+
+## About this fork
+Added functionality to create cutouts. Circular or rectangular.
+
+Circular            |  Rectangular
+:-------------------------:|:-------------------------:
+![](round_cutout_2.PNG)    | ![](rectangular_cutout.PNG)
+
+## Previous fork
 
 Refactored the original code to get a better understanding of it. As often in life, one action led to another. Hence this fork of Jieter's code.
 The repo name was changed into OOF-Engrave to avoid confusion with the original. This after having consulted Scorch, the F-Engrave author.
