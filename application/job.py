@@ -114,6 +114,8 @@ class Job(object):
         self.text.bbox = self.plot_bbox
 
     def job_image(self):
+        # Why do you exist? When are you executed?
+        print("job.py. NOW im executed! #################################")
         # self.image = MyImage()
         self.load_image()
         self.engrave.set_image(self.image)

@@ -115,7 +115,7 @@ class Settings(object):
         'v_pplot': False,
 
         'inlay': False,
-        'no_comments': True,
+        'no_comments': False,
 
         # arc fitting, options 'none', 'center', 'radius'
         'arc_fit': 'none',
@@ -126,15 +126,15 @@ class Settings(object):
 
         # cleanup cut directions
         'clean_P': True,
-        'clean_X': True,
-        'clean_Y': False,
+        'clean_X': False,
+        'clean_Y': True,
 
         # V-Bit cut directions
         'v_clean_P': False,
-        'v_clean_X': True,
-        'v_clean_Y': False,
+        'v_clean_X': False,
+        'v_clean_Y': True,
 
-        'yscale': 50.8,
+        'yscale': 50,
         'xscale': 100.0,
         'line_space': 1.2,
         'char_space': 25,
@@ -142,7 +142,7 @@ class Settings(object):
         'text_angle': 0.0,
 
         # safe height [GCODE]
-        'zsafe': 5.0,
+        'zsafe': 1.0,
 
         # engraving depth [GCODE]
         'zcut': -0.1,
@@ -169,20 +169,20 @@ class Settings(object):
         'feed_units': 'mm/min',
 
         # horizontal feedrate [GCODE]
-        'feedrate': 60.0,
+        'feedrate': 300.0,
 
         # feedrate for plunging into stock [GCODE]
-        'plunge_rate': 10.0,
+        'plunge_rate': 200.0,
 
         # which bounding boxes are used to calculate line height
         # options: 'max_all', 'max_use'
         'height_calculation': 'max_use',
 
         # Add a box/circle around plot
-        'plotbox': False,
+        'plotbox': True,
 
         # Gap between box and engraving
-        'boxgap': 6.35,
+        'boxgap': 3,
 
         # font location and name
         'fontdir': 'fonts',
@@ -200,9 +200,9 @@ class Settings(object):
 
         # options: 'scorch', 'voronoi'
         'v_strategy': 'scorch',  # new in v1.65b
-        'v_bit_angle': 60,
-        'v_bit_dia': 3.0,
-        'v_depth_lim': 0.0,
+        'v_bit_angle': 25,
+        'v_bit_dia': 3.175,
+        'v_depth_lim': -4.0,
         'v_drv_corner': 135,
         'v_step_corner': 200,
         'v_step_len': 0.254,
@@ -214,8 +214,8 @@ class Settings(object):
         # options: 'chr', 'all'
         'v_check_all': 'all',
 
-        'v_rough_stk': 0.0,
-        'v_max_cut': 0.0,
+        'v_rough_stk': 0.3,
+        'v_max_cut': -30.0,
 
         # options: 'black', 'white', 'right', 'left', 'minority', 'majority', or 'random'
         'bmp_turnpol': 'minority',
@@ -230,14 +230,22 @@ class Settings(object):
 
         'accuracy': 0.001,
 
+        # asdf
+        # diameter of cutout bit
+        'cut_dia': 3.175,
+        'cut_offset': -2.0,
+        'cut_depth': 23.0,
+        'cut_dpc': 1.0,
+        'cut_form': 'rect',
+
         # diameter of the cleanup bit
-        'clean_dia': 3.0,
+        'clean_dia': 3.175,
 
         # clean-up step-over as percentage of the clean-up bit diameter
-        'clean_step': 50,
+        'clean_step': 40,
         # Width of the clean-up search area (obsolete before or since v1.65)
         'clean_w': 50.8,
-        'clean_v': 1.27,
+        'clean_v': 0.3,
         'clean_name': '_clean',
 
         # G-Code Default Preamble
@@ -277,6 +285,8 @@ class Settings(object):
             available = [c for c in files_to_try if os.path.isfile(c)]
             if len(available) > 0:
                 self.from_configfile(available[0])
+            else:
+                print('not autoloading any configs')
 
     def __iter__(self):
         return self._settings.items()
@@ -318,6 +328,7 @@ class Settings(object):
         return self.get('fontdir') + os.path.sep + self.get('fontfile')
 
     def from_configfile(self, filename):
+        print('load settingsfrom configfile', filename)
         with open(filename, 'r') as config:
             for line in config.readlines():
                 if not line.startswith(CONFIG_MARKER):

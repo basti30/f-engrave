@@ -92,6 +92,7 @@ class Engrave(object):
         self.set_origin(self.settings.get('xorigin'),
                         self.settings.get('yorigin'))
         self.init_coords()
+        self.init_cutout_coords()
 
         # X and Y offset
         self.xzero = 0
@@ -102,6 +103,7 @@ class Engrave(object):
         self.stop_calc = False
 
         pub.subscribe(self.init_clean_coords, 'init_clean_coords')
+        pub.subscribe(self.init_cutout_coords, 'init_cutout_coords')
 
     def status_update(self, msg=None, color=COLOR_OK):
         pub.sendMessage('status_color', color=color)
@@ -113,6 +115,10 @@ class Engrave(object):
         self.v_coords = []
         self.clean_segment = []
         self.init_clean_coords()
+        self.init_cutout_coords()
+
+    def init_cutout_coords(self):
+        self.cut_coords = []
 
     def refresh_coords(self):
         if self.image is None:
@@ -155,6 +161,9 @@ class Engrave(object):
 
     def number_of_v_coords(self):
         return len(self.v_coords)
+
+    def number_of_cut_coords(self):
+        return len(self.cut_coords)
 
     def number_of_clean_coords(self):
         return len(self.clean_coords)
@@ -246,9 +255,75 @@ class Engrave(object):
         else:
             return rbit
 
+    def cutout(self):
+        print('engrave.cutout')
+        radius = self.settings.get('cut_dia') / 2
+        offset = self.settings.get('cut_offset')
+        loop_cnt = 0
+        # cut_form: 'circle_outer', 'rect', 'circle_inner'
+        shape = self.settings.get('cut_form')
+        print('shape',shape)
+
+        if shape == 'rect':
+            (minx, maxx, miny, maxy) = self.image.get_bbox().tuple()
+            minx -= radius + offset
+            miny -= radius + offset
+            maxx += radius + offset
+            maxy += radius + offset
+            #self.v_coords.append([x1, y1, 0.0, loop_cnt])
+            self.cut_coords.append([minx, miny, radius, loop_cnt])
+            self.cut_coords.append([minx, maxy, radius, loop_cnt])
+            self.cut_coords.append([maxx, maxy, radius, loop_cnt])
+            self.cut_coords.append([maxx, miny, radius, loop_cnt])
+            self.cut_coords.append([minx, miny, radius, loop_cnt])
+        elif shape == 'circle_outer' or shape == 'circle_inner':
+            (minx, maxx, miny, maxy) = self.image.get_bbox().tuple()
+            (x, y) = self.image.get_midxy()
+            r = 40
+            w_2 = self.image.get_width()/2
+            h_2 = self.image.get_height()/2
+            if shape == 'circle_outer':
+                r = sqrt(w_2*w_2 + h_2*h_2)
+            elif shape == 'circle_inner':
+                r = max(w_2, h_2)
+
+
+            print('minx',minx)
+            print('maxx',maxx)
+            print('miny',miny)
+            print('maxy',maxy)
+            print('x',x)
+            print('y',y)
+            print('r',r)
+            r += offset + radius
+            tol_deg = 1
+
+            # plot a circle with radius r at position x, y. with thickness dia
+            start = 0
+            end = 360
+            if end < start:
+                end = end + 360.0
+            delta = end - start
+            angle_steps = max(floor(delta) / tol_deg, 2)
+            start_r = radians(start)
+            end_r = radians(end)
+            step_phi = radians(delta / angle_steps)
+            x0 = x + r * cos(start_r)
+            y0 = y + r * sin(start_r)
+            self.cut_coords.append([x0, y0, radius, loop_cnt])
+            pcnt = 1
+            while pcnt < angle_steps + 1:
+                phi = start_r + pcnt * step_phi
+                x1 = x + r * cos(phi)
+                y1 = y + r * sin(phi)
+                self.cut_coords.append([x1, y1, radius, loop_cnt])
+                #x0 = x1
+                #y0 = y1
+                pcnt += 1
+
     # @do_cprofile
     def make_vcarve_toolpath(self, xPartitionLength, yPartitionLength, clean):
-
+        print('make_vcarve_toolpath', xPartitionLength, yPartitionLength)
         # set variable for first point in loop
         xa = 1e5
         ya = 1e5

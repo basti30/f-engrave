@@ -99,6 +99,9 @@ class Gui(Frame):
 
         pub.subscribe(self.calc_depth_limit, 'calc_depth_limit')
 
+        pub.subscribe(self.Calculate_CUT_Click, 'calculate_cutout')
+        pub.subscribe(self.Write_Cut_Click, 'write_cut_file')
+
         pub.subscribe(self.Write_Clean_Click, 'write_clean_file')
         pub.subscribe(self.Write_V_Clean_Click, 'write_v_clean_file')
 
@@ -273,7 +276,7 @@ class Gui(Frame):
             else:
                 self.load_image_file()
 
-            self.do_it()
+            self.recalculate_it()
 
             if self.settings.get('cut_type') == CUT_TYPE_VCARVE:
                 self.v_carve_it()
@@ -425,14 +428,43 @@ class Gui(Frame):
         self.Quit_Click(None)
 
     def Recalculate_Click(self, event=None):
-        self.do_it()
+        self.recalculate_it()
 
     def Settings_ReLoad_Click(self, event=None, arg1="", arg2=""):
         win_id = self.grab_current()
-        self.do_it()
+        self.recalculate_it()
         try:
             win_id.withdraw()
             win_id.deiconify()
+        except:
+            pass
+
+    def Calculate_CUT_Click(self):
+        print('Hello there, Calculate_CUT_Click')
+        win_id = self.grab_current()
+
+        self.Cutout_Calc_Click()
+        self.plot_toolpath()
+
+        try:
+            win_id.withdraw()
+            win_id.deiconify()
+            win_id.grab_set()
+        except:
+            pass
+
+    def Write_Cut_Click(self):
+        print('Hello there, Write_Cut_Click')
+
+        win_id = self.grab_current()
+
+        self.plot_toolpath()
+        self.menu_File_Save_cutout_G_Code_File()
+
+        try:
+            win_id.withdraw()
+            win_id.deiconify()
+            win_id.grab_set()
         except:
             pass
 
@@ -591,6 +623,7 @@ class Gui(Frame):
 
         self.reset_error_count()
         pub.sendMessage('check_all_variables', new=new)
+        return 0 # how should this return anything?
 
     def V_Carve_Calc_Click(self):
         self.Check_All_Variables()
@@ -643,6 +676,56 @@ class Gui(Frame):
             vcalc_status.destroy()
         except:
             pass
+
+    # manages the calculation progress gui window for the cutout
+    def Cutout_Calc_Click(self):
+
+        self.Check_All_Variables()
+        if self.error_count > 0:
+            print('self.error_count > 0')
+            return True  # Stop
+
+        width = 550
+        height = 60
+        vcalc_status = Toplevel(width=525, height=50)
+        vcalc_status.resizable(0, 0)
+
+        # Use grab_set to prevent user input in the main window during calculations
+        vcalc_status.grab_set()
+        vcalc_status.title('Executing Clean Area Calculation')
+        vcalc_status.iconname("F-Engrave")
+
+        self.stop_button = Button(vcalc_status, text="Stop Calculation")
+        self.stop_button.pack(side=LEFT, padx=10, pady=10)
+        self.stop_button.bind("<ButtonRelease-1>", self.Stop_Click)
+
+        self.statusbar2 = Label(vcalc_status, textvariable=self.statusMessage, bd=1, relief=FLAT)
+        self.statusbar2.pack(side=LEFT)
+        self.statusMessage.set("Starting Cutout Calculation")
+        self.statusbar.configure(bg='yellow')
+
+        try:
+            vcalc_status.iconbitmap(bitmap="@emblem64")
+        except:
+            try:  # attempt to create temporary icon bitmap file
+                temp_icon("f_engrave_icon")
+                vcalc_status.iconbitmap("@f_engrave_icon")
+                os.remove("f_engrave_icon")
+            except:
+                pass
+
+        position_window(vcalc_status, width, height)
+
+        # actual calculation of the cutout
+        self.cutout_it()
+
+        vcalc_status.grab_release()
+        try:
+            vcalc_status.destroy()
+        except:
+            pass
+
+        return False
 
     def Clean_Calc_Click(self, bit_type="straight"):
 
@@ -743,7 +826,7 @@ class Gui(Frame):
             self.IMAGE_FILE = fileselect
             self.settings.set('IMAGE_FILE', fileselect)
             self.load_image_file()
-            self.do_it()
+            self.recalculate_it()
 
     def load_image_file(self):
         self.reload_image_file()
@@ -882,6 +965,50 @@ class Gui(Frame):
                     fout.write('(skipping line)\n')
             fout.close()
             self.statusMessage.set("File Saved: %s" % filename)
+            self.statusbar.configure(bg='white')
+
+    def menu_File_Save_cutout_G_Code_File(self):
+
+        self.Check_All_Variables()
+        if self.error_count > 0:
+            return
+
+        g_code = write_cutout(self.engrave)
+        # todo add new button for this g_code.extend(write_clean_up(self.engrave, 'straight'))
+
+        init_dir = os.path.dirname(self.NGC_FILE)
+        if not os.path.isdir(init_dir):
+            init_dir = self.HOME_DIR
+
+        if self.settings.get('input_type') == INPUT_TYPE_IMAGE:
+            fileName, fileExtension = os.path.splitext(self.IMAGE_FILE)
+            init_file = os.path.basename(fileName)
+            fileName_tmp, fileExtension = os.path.splitext(init_file)
+            init_file = fileName_tmp
+        else:
+            init_file = "text"
+
+        init_file = init_file + '_cutout'
+
+        filename = asksaveasfilename(defaultextension='.ngc',
+                                     filetypes=[("G-Code File", "*.ngc"), ("TAP File", "*.tap"), ("All Files", "*")],
+                                     initialdir=init_dir,
+                                     initialfile=init_file)
+
+        if filename != '' and filename != ():
+            try:
+                fout = open(filename, 'w')
+            except IOError:
+                self.statusMessage.set("Unable to open file for writing: %s" % (filename))
+                self.statusbar.configure(bg='red')
+                return
+            for line in g_code:
+                try:
+                    fout.write(line + '\n')
+                except:
+                    fout.write('(skipping line)\n')
+            fout.close()
+            self.statusMessage.set("File Saved: %s" % (filename))
             self.statusbar.configure(bg='white')
 
     def menu_File_Save_clean_G_Code_File(self, bit_type="straight"):
@@ -1121,7 +1248,7 @@ class Gui(Frame):
         self.Master_Configure(dummy_event, True)
 
         self.delay_calc = False
-        self.do_it()
+        self.recalculate_it()
 
     def Master_Configure_image(self):
         self.PreviewCanvas.grid_forget()
@@ -1134,7 +1261,7 @@ class Gui(Frame):
         self.mainwindow_image_left.grid(row=0, rowspan=2, column=0, pady=10, sticky=NSEW)
         self.mainwindow_image_left.master_configure()
 
-    def plot_line(self, old, new, midx, midy, cszw, cszh, color, radius=0):
+    def plot_line(self, old, new, midx, midy, cszw, cszh, color, radius=0, stipple=None):
         XX1, YY1 = old
         XX2, YY2 = new
         x1 = cszw / 2 + (XX1 - midx) / self.plot_scale
@@ -1145,7 +1272,7 @@ class Gui(Frame):
             thick = 0
         else:
             thick = radius * 2 / self.plot_scale
-        self.PreviewCanvas.create_line(x1, y1, x2, y2, fill=color, capstyle="round", width=thick)
+        self.PreviewCanvas.create_line(x1, y1, x2, y2, fill=color, capstyle="round", width=thick, stipple=stipple)
 
     def plot_circle(self, normv, midx, midy, cszw, cszh, color, rad, fill):
         XX, YY = normv
@@ -1165,7 +1292,7 @@ class Gui(Frame):
 
     def Recalculation_RQD(self, event=None):
         self.recalculate_RQD_Nocalc(event)
-        self.do_it()
+        self.recalculate_it()
 
     def plot_toolpath(self):
         """
@@ -1336,6 +1463,29 @@ class Gui(Frame):
                 loop_old = loop
                 old = new
 
+        # Plot cutout
+        old = (0.0, 0.0)
+        loop_old = -1
+        for XY in self.engrave.cut_coords:
+            new = (XY[0], XY[1])
+            r = XY[2]
+            loop = XY[3]
+            if loop == loop_old:
+                self.plot_line(old, new, midx, midy, cszw, cszh, "blue", r, "gray50")
+            loop_old = loop
+            old = new
+
+        old = (0.0, 0.0)
+        loop_old = -1
+        for XY in self.engrave.cut_coords:
+            new = (XY[0], XY[1])
+            loop = XY[3]
+            if loop == loop_old:
+                self.plot_line(old, new, midx, midy, cszw, cszh, "white")
+            loop_old = loop
+            old = new
+
+
         if self.settings.get('show_axis'):
             # Plot coordinate system origin
             self.PreviewCanvas.create_line(axis_x1, axis_y1,
@@ -1345,7 +1495,8 @@ class Gui(Frame):
                                            axis_x1, axis_y2,
                                            fill='green', width=0)
 
-    def do_it(self):
+    def recalculate_it(self):
+        print('recalculate it')
         """
         Show the original data and plot toolpaths, if any were generated
         """
@@ -1507,7 +1658,7 @@ class Gui(Frame):
             fmessage(")")
 
     def do_it_image(self):
-
+        print("gui.py")
         if len(self.image) == 0 and self.batch.get() is False:
             self.statusbar.configure(bg='red')
             self.statusMessage.set("No Image Loaded")
@@ -1747,7 +1898,7 @@ class Gui(Frame):
             return
 
         if not clean:
-            self.do_it()
+            self.recalculate_it()
             self.engrave.init_clean_coords()
         elif self.engrave.clean_coords_sort != [] or self.engrave.v_clean_coords_sort != []:
             # clear the screen before computing if there is existing cleanup data
@@ -1776,6 +1927,51 @@ class Gui(Frame):
         # in OS X, if the window position is upper left the window maximizes when resizing is enabled
         self.master.resizable(True, True)
         self.master.bind("<Configure>", self.Master_Configure)
+
+    def cutout_it(self):
+
+        self.master.unbind("<Configure>")
+        self.master.resizable(False, False)
+
+        # step length value floor
+        v_step_len = self.settings.get('v_step_len')
+        if self.settings.get('units') == "mm":
+            if v_step_len < .01:
+                v_step_len = 0.01
+                self.settings.set('v_step_len', v_step_len)
+        else:
+            if v_step_len < .0005:
+                v_step_len = 0.0005
+                self.settings.set('v_step_len', v_step_len)
+
+        self.Check_All_Variables()
+        if self.error_count > 0:
+            print('self.error_count > 0:')
+            return
+
+        #self.recalculate_it()
+        # clean up the canvas
+        self.engrave.init_cutout_coords()
+        self.plot_toolpath()
+
+        if not self.batch.get():
+            self.statusbar.configure(bg='yellow')
+            self.statusMessage.set('Preparing for V-Carve Calculations')
+            self.master.update()
+
+        if not self.batch.get():
+            if self.settings.get('v_pplot') is True:
+                self.plot_toolpath()
+
+        # actual cutout calculation
+        done = self.engrave.cutout()
+
+        if done and self.batch.get() is False:
+            self.statusMessage.set('Done -- ' + self.bounding_box.get())
+            self.statusbar.configure(bg='white')
+
+        self.master.resizable(True, True)
+        self.master.bind("<Configure>", self.Master_Configure) #
 
     def ZOOM_ITEMS(self, x0, y0, z_factor):
         all = self.PreviewCanvas.find_all()

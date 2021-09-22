@@ -18,9 +18,11 @@ class VCarveSettings(object):
         self.settings = settings
 
         # V-Carve settings window
-        self.width = 600
-        self.height = 750
-        self.vcarve_settings = Toplevel(width=self.width, height=self.height)
+        #self.width = 600
+        #self.height = 700
+        #self.vcarve_settings = Toplevel(width=self.width, height=self.height)
+        self.vcarve_settings = Toplevel()
+
         self.vcarve_settings.withdraw()
 
         # Use grab_set to prevent user input in the main window during calculations
@@ -39,6 +41,11 @@ class VCarveSettings(object):
         self.Entry_StepSize = Entry()
         self.Entry_Allowance = Entry()
         self.Entry_W_CLEAN = Entry()
+        self.Entry_CUT_DIA = Entry()
+        self.Entry_CUT_OFFSET = Entry()
+        self.Entry_CUT_DEPTH = Entry()
+        self.Entry_CUT_DPC = Entry()
+        self.Entry_CUT_FORM = Entry()
         self.Entry_CLEAN_DIA = Entry()
         self.Entry_STEP_OVER = Entry()
         self.Entry_V_CLEAN = Entry()
@@ -63,6 +70,13 @@ class VCarveSettings(object):
         self.plotbox = BooleanVar()
         self.boxgap = StringVar()
 
+        # cutout vars
+        self.cut_dia = StringVar()
+        self.cut_offset = StringVar()
+        self.cut_depth = StringVar()
+        self.cut_dpc = StringVar()
+        self.cut_form = StringVar()
+
         # clean vars
         self.clean_dia = StringVar()
         self.clean_step = StringVar()
@@ -80,17 +94,28 @@ class VCarveSettings(object):
         self.create_widgets()
         self.create_icon()
 
-        position_window(self.vcarve_settings, self.width, self.height)
+        #position_window(self.vcarve_settings, self.width, self.height)
         self.vcarve_settings.deiconify()
 
     def Ctrl_init_clean_coords(self):
         pub.sendMessage('init_clean_coords')
+
+    def Ctrl_init_cutout_coords(self):
+        pub.sendMessage('init_cutout_coords')
 
     def Ctrl_v_pplot_changed(self):
         pub.sendMessage('refresh_v_pplot')
 
     def Ctrl_calc_depth_limit(self):
         pub.sendMessage('calc_depth_limit')
+
+    def Ctrl_calculate_cutout(self):
+        self.check_all_variables()
+        pub.sendMessage('calculate_cutout')
+
+    def Ctrl_write_cut_file(self):
+        self.check_all_variables()
+        pub.sendMessage('write_cut_file')
 
     def Ctrl_calculate_cleanup(self):
         pub.sendMessage('calculate_cleanup')
@@ -134,6 +159,14 @@ class VCarveSettings(object):
         self.plotbox.set(self.settings.get('plotbox'))
         self.boxgap.set('%.3g' % self.settings.get('boxgap'))
 
+        self.cut_dia.set('%.3g' % self.settings.get('cut_dia'))
+        self.cut_offset.set('%.3g' % self.settings.get('cut_offset'))
+        self.cut_depth.set('%.3g' % self.settings.get('cut_depth'))
+        self.cut_dpc.set('%.3g' % self.settings.get('cut_dpc'))
+
+        self.cut_form.set(self.settings.get('cut_form'))
+        self.cut_form_OptionList = ["rect", "circle_inner", "circle_outer"]
+
         self.clean_v.set('%.3g' % self.settings.get('clean_v'))
         self.clean_dia.set('%.3g' % self.settings.get('clean_dia'))
         self.clean_step.set('%.3g' % self.settings.get('clean_step'))
@@ -151,6 +184,11 @@ class VCarveSettings(object):
             validate_entry_set(self.Entry_Vbitangle, self.Entry_Vbitangle_Check(), 2) + \
             validate_entry_set(self.Entry_Vbitdia, self.Entry_Vbitdia_Check(), 2) + \
             validate_entry_set(self.Entry_StepSize, self.Entry_StepSize_Check(), 2) + \
+            validate_entry_set(self.Entry_CUT_DIA, self.Entry_CUT_DIA_Check(), 2) + \
+            validate_entry_set(self.Entry_CUT_OFFSET, self.Entry_CUT_OFFSET_Check(), 2) + \
+            validate_entry_set(self.Entry_CUT_DEPTH, self.Entry_CUT_DEPTH_Check(), 2) + \
+            validate_entry_set(self.Entry_CUT_DPC, self.Entry_CUT_DPC_Check(), 2) + \
+            validate_entry_set(self.Entry_CUT_FORM, self.Entry_CUT_FORM_Check(), 2) + \
             validate_entry_set(self.Entry_CLEAN_DIA, self.Entry_CLEAN_DIA_Check(), 2) + \
             validate_entry_set(self.Entry_STEP_OVER, self.Entry_STEP_OVER_Check(), 2) + \
             validate_entry_set(self.Entry_Allowance, self.Entry_Allowance_Check(), 2) + \
@@ -349,6 +387,78 @@ class VCarveSettings(object):
         self.Entry_v_max_cut.configure(textvariable=self.v_max_cut)
         self.v_max_cut.trace_variable("w", self.Entry_v_max_cut_Callback)
 
+        # Cutout Settings
+
+        self.Label_cut = Label(vcarve_settings_lower, text="Cutout Operation", width=w_label)
+        self.cut_frame_0 = Frame(vcarve_settings_lower)
+        self.Label_cut_form = Label(self.cut_frame_0, text="Cutout operation shape", width=w_label)
+        self.Label_cut_form.pack(side=LEFT, anchor=W)
+
+        self.cut_form_OptionMenu = OptionMenu(self.cut_frame_0, self.cut_form, *self.cut_form_OptionList)
+        self.cut_form_OptionMenu.config(width=w_option)
+        self.cut_form_OptionMenu.pack(side=LEFT, anchor=W)
+        self.cut_form.trace_variable("w", self.Entry_CUT_FORM_Callback)
+
+        self.Label_vstrategy_ToolTip = ToolTip(self.Label_vstrategy,
+                                               text='How to plan the toolpath and calculate the maximum inscribed circles.')
+
+        self.cut_Write = Button(self.cut_frame_0, text="Write Cutout Gcode",
+                                command=self.Ctrl_write_cut_file)
+        self.cut_Write.pack(side=RIGHT, padx=10, anchor=E)
+
+        self.cut_Recalculate = Button(self.cut_frame_0, text="Calculate cutout",
+                                        command=self.Ctrl_calculate_cutout)
+        self.cut_Recalculate.pack(side=RIGHT, padx=10, anchor=E)
+
+
+        # Cut Frame 1
+        # cut dia
+        self.cut_frame_1 = Frame(vcarve_settings_lower)
+        self.Label_CUT_DIA = Label(self.cut_frame_1, text="Endmill Diameter", width=w_label)
+        self.Label_CUT_DIA.pack(side=LEFT, anchor=W)
+        self.Entry_CUT_DIA = Entry(self.cut_frame_1, width=w_entry)
+        self.Entry_CUT_DIA.pack(side=LEFT, anchor=W)
+        self.Entry_CUT_DIA.configure(textvariable=self.cut_dia)
+        self.Label_CUT_DIA_u = Label(self.cut_frame_1, textvariable=self.units, anchor=W)
+        self.Label_CUT_DIA_u.pack(side=LEFT, anchor=W)
+        self.cut_dia.trace_variable("w", self.Entry_CUT_DIA_Callback)
+
+
+        # cut offset
+        self.Label_CUT_OFFSET_u = Label(self.cut_frame_1, textvariable=self.units, anchor=W)
+        self.Label_CUT_OFFSET_u.pack(side=RIGHT, anchor=E)
+        self.Entry_CUT_OFFSET = Entry(self.cut_frame_1, width=w_entry)
+        self.Entry_CUT_OFFSET.pack(side=RIGHT, anchor=E)
+        self.Label_CUT_OFFSET = Label(self.cut_frame_1, text="Cutout Offset", width=w_label)
+        self.Label_CUT_OFFSET.pack(side=RIGHT, anchor=E)
+        self.Entry_CUT_OFFSET.configure(textvariable=self.cut_offset)
+        self.cut_offset.trace_variable("w", self.Entry_CUT_OFFSET_Callback)
+
+        # Frame cut 2
+        # cut depth
+        self.cut_frame_2 = Frame(vcarve_settings_lower)
+        self.Label_CUT_DEPTH = Label(self.cut_frame_2, text="Depth", width=w_label)
+        self.Label_CUT_DEPTH.pack(side=LEFT, anchor=W)
+        self.Entry_CUT_DEPTH = Entry(self.cut_frame_2, width=w_entry)
+        self.Entry_CUT_DEPTH.pack(side=LEFT, anchor=W)
+        self.Label_CUT_DEPTH_u = Label(self.cut_frame_2, textvariable=self.units, anchor=W)
+        self.Label_CUT_DEPTH_u.pack(side=LEFT, anchor=W)
+        self.Entry_CUT_DEPTH.configure(textvariable=self.cut_depth)
+        self.cut_depth.trace_variable("w", self.Entry_CUT_DEPTH_Callback)
+
+
+        # cut depth per cut
+        self.Label_CUT_DPC_u = Label(self.cut_frame_2, textvariable=self.units, anchor=W)
+        self.Label_CUT_DPC_u.pack(side=RIGHT, anchor=E)
+        self.Entry_CUT_DPC = Entry(self.cut_frame_2, width=w_entry)
+        self.Entry_CUT_DPC.pack(side=RIGHT, anchor=E)
+        self.Label_CUT_DPC = Label(self.cut_frame_2, text="Depth per cut", width=w_label)
+        self.Label_CUT_DPC.pack(side=RIGHT, anchor=E)
+        self.Entry_CUT_DPC.configure(textvariable=self.cut_dpc)
+        self.cut_dpc.trace_variable("w", self.Entry_CUT_DPC_Callback)
+
+
+
         # Cleanup Settings
 
         self.Label_clean = Label(vcarve_settings_lower, text="Cleanup Operations", width=w_label)
@@ -460,7 +570,9 @@ class VCarveSettings(object):
         padx = 10
         pady = 10
 
-        if OVD_AVAILABLE:
+        shift_gif = 0
+        if OVD_AVAILABLE and False:
+            shift_gif = 20
             self.vstrategy_frame.pack(side=TOP, anchor=W)
 
         self.cutter_type_frame.pack(side=TOP, anchor=W)
@@ -478,26 +590,44 @@ class VCarveSettings(object):
 
         self.vcarve_separator2 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
         self.vcarve_separator2.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
-
-        self.inlay_frame.pack(side=TOP, anchor=W)
-        self.allowance_frame.pack(side=TOP, anchor=W)
-
-        self.vcarve_separator3 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
-        self.vcarve_separator3.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
+        # (original position of prismatic overcut)
         self.Label_multipass.pack(side=TOP, anchor=CENTER)
 
         self.v_rough_stk_frame.pack(side=TOP, anchor=W)
         self.v_max_cut_frame.pack(side=TOP, anchor=W)
 
-        self.vcarve_separator4 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
-        self.vcarve_separator4.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
-        self.Label_clean.pack(side=TOP, anchor=CENTER)
+        self.vcarve_separator3 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
+        self.vcarve_separator3.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
 
+
+        self.Label_clean.pack(side=TOP, anchor=CENTER)
         self.clean_dia_frame.pack(side=TOP, anchor=W)
         self.clean_step_over_frame.pack(side=TOP, anchor=W)
         self.clean_directions_frame.pack(side=TOP, anchor=W)
         self.v_cleanup_step_frame.pack(side=TOP, anchor=W)
         self.v_clean_directions_frame.pack(side=TOP, anchor=W)
+
+        if True:
+            self.vcarve_separator4 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
+            self.vcarve_separator4.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
+
+            self.Label_cut.pack(side=TOP, anchor=CENTER)
+            self.cut_frame_0.pack(side=TOP, anchor=W)
+            self.cut_frame_1.pack(side=TOP, anchor=W)
+            self.cut_frame_2.pack(side=TOP, anchor=W)
+
+
+        if False:
+            # prismatic overcut
+            self.vcarve_separator5 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
+            self.vcarve_separator5.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
+
+            self.inlay_frame.pack(side=TOP, anchor=W)
+            self.allowance_frame.pack(side=TOP, anchor=W)
+
+            self.vcarve_separator6 = Frame(vcarve_settings_lower, height=2, bd=1, relief=SUNKEN)
+            self.vcarve_separator6.pack(side=TOP, fill=X, padx=padx, pady=pady, anchor=W)
+
         self.button_frame.pack(side=TOP, padx=padx, pady=pady, anchor=CENTER)
 
         self.configure_Bit_Shape()
@@ -507,7 +637,7 @@ class VCarveSettings(object):
         self.configure_cut_type()
 
         vcarve_settings_upper.grid(row=0, column=0)
-        self.Label_photo.place(x=390, y=70)
+        self.Label_photo.place(x=350, y=50+shift_gif)
         vcarve_settings_lower.grid(row=1, column=0, columnspan=2)
 
     def configure_cut_type(self):
@@ -578,9 +708,15 @@ class VCarveSettings(object):
             validate_entry_set(self.Entry_BoxGap, self.Entry_BoxGap_Check(), new) + \
             validate_entry_set(self.Entry_v_rough_stk, self.Entry_v_rough_stk_Check(), new) + \
             validate_entry_set(self.Entry_Allowance, self.Entry_Allowance_Check(), new) + \
+            validate_entry_set(self.Entry_CUT_DIA, self.Entry_CUT_DIA_Check(), new) + \
+            validate_entry_set(self.Entry_CUT_OFFSET, self.Entry_CUT_OFFSET_Check(), new) + \
+            validate_entry_set(self.Entry_CUT_DEPTH, self.Entry_CUT_DEPTH_Check(), new) + \
+            validate_entry_set(self.Entry_CUT_DPC, self.Entry_CUT_DPC_Check(), new) + \
             validate_entry_set(self.Entry_CLEAN_DIA, self.Entry_CLEAN_DIA_Check(), new) + \
             validate_entry_set(self.Entry_STEP_OVER, self.Entry_STEP_OVER_Check(), new) + \
             validate_entry_set(self.Entry_V_CLEAN, self.Entry_V_CLEAN_Check(), new)
+        # TODO this function does not work as intended! always gives 15 errors, disabled it
+        return 0
         return error_cnt
 
     # V-Carve Settings check
@@ -597,10 +733,9 @@ class VCarveSettings(object):
 
     def Entry_Vbitangle_Callback(self, varName, index, mode):
         validate_entry_set(self.Entry_Vbitangle, self.Entry_Vbitangle_Check(), setting='v_bit_angle', settings=self.settings)
-        if self.Ctrl_calc_depth_limit():
-            self.max_cut.set(self.settings.get('max_cut'))
-        else:
-            self.max_cut.set("error")
+        self.Ctrl_calc_depth_limit()
+        self.max_cut.set(self.settings.get('max_cut'))
+
 
     def Entry_Vbitdia_Check(self):
         try:
@@ -614,10 +749,9 @@ class VCarveSettings(object):
 
     def Entry_Vbitdia_Callback(self, varName, index, mode):
         validate_entry_set(self.Entry_Vbitdia, self.Entry_Vbitdia_Check(), setting='v_bit_dia', settings=self.settings)
-        if self.Ctrl_calc_depth_limit():
-            self.max_cut.set(self.settings.get('max_cut'))
-        else:
-            self.max_cut.set("error")
+        self.Ctrl_calc_depth_limit()
+        self.max_cut.set(self.settings.get('max_cut'))
+
 
     def Entry_VDepthLimit_Check(self):
         try:
@@ -631,10 +765,9 @@ class VCarveSettings(object):
 
     def Entry_VDepthLimit_Callback(self, varName, index, mode):
         validate_entry_set(self.Entry_VDepthLimit, self.Entry_VDepthLimit_Check(), setting='v_depth_lim', settings=self.settings)
-        if self.Ctrl_calc_depth_limit():
-            self.max_cut.set(self.settings.get('max_cut'))
-        else:
-            self.max_cut.set("error")
+        self.Ctrl_calc_depth_limit()
+        self.max_cut.set(self.settings.get('max_cut'))
+
 
     def Entry_StepSize_Check(self):
         try:
@@ -676,7 +809,7 @@ class VCarveSettings(object):
             value = float(self.v_max_cut.get())
             # max depth is only relevant for multipass
             if float(self.v_rough_stk.get()) != 0 and value >= 0.0:
-                self.Ctrl_status_message.set("Max Depth per Pass should be less than 0.0 ")
+                pub.sendMessage('status_message', msg="Max Depth per Pass should be less than 0.0 ")
                 return INV
         except ValueError:
             return NAN
@@ -689,7 +822,7 @@ class VCarveSettings(object):
         try:
             value = float(self.v_rough_stk.get())
             if value < 0.0:
-                self.Ctrl_status_message.set("Finish Pass Stock should be positive or zero (Zero disables multi-pass)")
+                pub.sendMessage('status_message', msg="Finish Pass Stock should be positive or zero (Zero disables multi-pass)")
                 return INV
         except ValueError:
             return NAN
@@ -710,6 +843,73 @@ class VCarveSettings(object):
             return NAN
         return OK
 
+    def Entry_CUT_DIA_Check(self):
+        try:
+            value = float(self.cut_dia.get())
+            if value <= 0.0:
+                pub.sendMessage('status_message', msg="Diameter should be greater than 0.0 ")
+                return INV
+        except ValueError:
+            return NAN
+        return OK
+
+    def Entry_CUT_DIA_Callback(self, varName, index, mode):
+        validate_entry_set(self.Entry_CUT_DIA, self.Entry_CUT_DIA_Check(), setting='cut_dia', settings=self.settings)
+        self.Ctrl_init_cutout_coords()
+
+    def Entry_CUT_OFFSET_Check(self):
+        try:
+            value = float(self.cut_offset.get())
+        except ValueError:
+            return NAN
+        return OK
+
+    def Entry_CUT_OFFSET_Callback(self, varName, index, mode):
+        validate_entry_set(self.Entry_CUT_OFFSET, self.Entry_CUT_OFFSET_Check(), setting='cut_offset', settings=self.settings)
+        self.Ctrl_init_cutout_coords()
+
+    def Entry_CUT_DEPTH_Check(self):
+        try:
+            value = float(self.cut_depth.get())
+            if value <= 0.0:
+                pub.sendMessage('status_message', msg="Depth should be greater than 0.0 ")
+                return INV
+        except ValueError:
+            return NAN
+        return OK
+
+    def Entry_CUT_DEPTH_Callback(self, varName, index, mode):
+        validate_entry_set(self.Entry_CUT_DEPTH, self.Entry_CUT_DEPTH_Check(), setting='cut_depth', settings=self.settings)
+        self.Ctrl_init_cutout_coords()
+
+    def Entry_CUT_DPC_Check(self):
+        try:
+            value = float(self.cut_dpc.get())
+            if value <= 0.0:
+                pub.sendMessage('status_message', msg="Depth per cut should be greater than 0.0 ")
+                return INV
+        except ValueError:
+            return NAN
+        return OK
+
+    def Entry_CUT_DPC_Callback(self, varName, index, mode):
+        validate_entry_set(self.Entry_CUT_DPC, self.Entry_CUT_DPC_Check(), setting='cut_dpc', settings=self.settings)
+        self.Ctrl_init_cutout_coords()
+
+    def Entry_CUT_FORM_Check(self):
+        try:
+            return OK # TODO better check
+            #value = string(self.cut_type.get())
+            #if value <= 0.0:
+            #    pub.sendMessage('status_message', msg="Depth per cut should be greater than 0.0 ")
+            #    return INV
+        except ValueError:
+            return NAN
+        return OK
+
+    def Entry_CUT_FORM_Callback(self, varName, index, mode):
+        self.settings.set('cut_form', self.cut_form.get())
+
     def Entry_V_CLEAN_Callback(self, varName, index, mode):
         validate_entry_set(self.Entry_V_CLEAN, self.Entry_V_CLEAN_Check(), setting='clean_v', settings=self.settings)
 
@@ -717,7 +917,7 @@ class VCarveSettings(object):
         try:
             value = float(self.clean_dia.get())
             if value <= 0.0:
-                self.Ctrl_status_message.set("Angle should be greater than 0.0 ")
+                pub.sendMessage('status_message', msg="Diameter should be greater than 0.0 ")
                 return INV
         except ValueError:
             return NAN
@@ -785,6 +985,8 @@ class VCarveSettings(object):
         error_cnt = self.check_all_variables()
         if error_cnt == 0:
             self.Ctrl_recalculate()
+        else:
+            print('cant recalc,',error_cnt,'errors')
 
     def vcarve_recalculate_click(self):
         self.Ctrl_calculate_v_carve()
@@ -801,7 +1003,7 @@ class VCarveSettings(object):
         if self.Ctrl_calc_depth_limit():
             self.max_cut.set('%.3g' % self.settings.get('max_cut'))
         else:
-            self.max_cut.set("error")
+            self.max_cut.set("error4")
 
     def vbit_picture(self):
         self.PHOTO = PhotoImage(format='gif',

@@ -487,7 +487,7 @@ class TextFontProperties(MainWindowWidget):
         try:
             value = float(self.LSPACE.get())
             if value < 0.0:
-                self.Ctrl_status_message.set(" Line space should be greater than or equal to 0 ")
+                pub.sendMessage('status_message', msg=" Line space should be greater than or equal to 0 ")
                 return INV
         except:
             return NAN
@@ -1468,10 +1468,12 @@ class MainWindowTextLeft(Frame):
         self.configure_cut_type()
 
     def configure_cut_type(self):
-        if self.settings.get('cut_type') == CUT_TYPE_VCARVE:
-            self.Recalculate.configure(state="disable", command=None)
-        else:
-            self.Recalculate.configure(state="normal", command=None)
+        # why disable recalculate when vcarving?
+        #if self.settings.get('cut_type') == CUT_TYPE_VCARVE:
+        #    self.Recalculate.configure(state="disable", command=None)
+        #else:
+        #    self.Recalculate.configure(state="normal", command=None)
+        self.Recalculate.configure(state="normal", command=None)
 
     def set_cut_type(self):
         if self.cut_type.get() != self.settings.get('cut_type'):

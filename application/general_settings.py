@@ -387,6 +387,13 @@ class GeneralSettings(object):
         self.settings.set('v_step_len', self.settings.get('v_step_len') * factor)
         self.settings.set('allowance', self.settings.get('allowance') * factor)
         self.settings.set('v_rough_stk', self.settings.get('v_rough_stk') * factor)
+
+        self.settings.set('cut_dia', self.settings.get('cut_dia') * factor)
+        self.settings.set('cut_offset', self.settings.get('cut_offset') * factor)
+        self.settings.set('cut_depth', self.settings.get('cut_depth') * factor)
+        self.settings.set('cut_dpc', self.settings.get('cut_dpc') * factor)
+        #todo cut_form?
+
         self.settings.set('clean_dia', self.settings.get('clean_dia') * factor)
         self.settings.set('clean_v', self.settings.get('clean_v') * factor)
 
